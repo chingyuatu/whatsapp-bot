@@ -1,9 +1,20 @@
+import os
+from flask import Flask, request
+from twilio.twiml.messaging_response import MessagingResponse
+from google import genai
+
+app = Flask(__name__)
+
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+
+chat_history = {}
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
     incoming_msg = request.values.get("Body", "").strip()
     sender = request.values.get("From", "")
-    
-    print(f"收到訊息: {incoming_msg} 來自: {sender}")  # ← 加這行
+
+    print(f"收到訊息: {incoming_msg} 來自: {sender}")
 
     if sender not in chat_history:
         chat_history[sender] = []
@@ -19,20 +30,4 @@ def webhook():
             contents=chat_history[sender]
         )
         reply_text = response.text
-        print(f"Gemini 回覆: {reply_text}")  # ← 加這行
-
-        chat_history[sender].append({
-            "role": "model",
-            "parts": [{"text": reply_text}]
-        })
-
-        if len(chat_history[sender]) > 20:
-            chat_history[sender] = chat_history[sender][-20:]
-
-    except Exception as e:
-        reply_text = f"Error: {str(e)}"
-        print(f"錯誤: {str(e)}")  # ← 加這行
-
-    resp = MessagingResponse()
-    resp.message(reply_text)
-    return str(resp)
+        print(f"Gemini 回覆: {reply_text}")
