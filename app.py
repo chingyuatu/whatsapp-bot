@@ -1,12 +1,11 @@
 import os
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
-import google.generativeai as genai
+from google import genai
 
 app = Flask(__name__)
 
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-2.0-flash")
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 chat_history = {}
 
@@ -20,17 +19,19 @@ def webhook():
 
     chat_history[sender].append({
         "role": "user",
-        "parts": [incoming_msg]
+        "parts": [{"text": incoming_msg}]
     })
 
     try:
-        chat = model.start_chat(history=chat_history[sender][:-1])
-        response = chat.send_message(incoming_msg)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=chat_history[sender]
+        )
         reply_text = response.text
 
         chat_history[sender].append({
             "role": "model",
-            "parts": [reply_text]
+            "parts": [{"text": reply_text}]
         })
 
         if len(chat_history[sender]) > 20:
