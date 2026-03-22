@@ -1,7 +1,7 @@
 import os
 import logging
 from flask import Flask, request
-from google import genai
+from groq import Groq
 import requests
 
 logging.basicConfig(level=logging.INFO)
@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 PAGE_ACCESS_TOKEN = os.environ.get("PAGE_ACCESS_TOKEN")
 VERIFY_TOKEN = os.environ.get("VERIFY_TOKEN")
 
@@ -47,19 +47,20 @@ def webhook():
 
                     chat_history[sender_id].append({
                         "role": "user",
-                        "parts": [{"text": incoming_msg}]
+                        "content": incoming_msg
                     })
 
                     try:
-                        response = client.models.generate_content(
-                            model="gemini-2.0-flash",
-                            contents=chat_history[sender_id]
+                        response = client.chat.completions.create(
+                            model="llama-3.3-70b-versatile",
+                            messages=chat_history[sender_id],
+                            max_tokens=1024
                         )
-                        reply_text = response.text
+                        reply_text = response.choices[0].message.content
 
                         chat_history[sender_id].append({
-                            "role": "model",
-                            "parts": [{"text": reply_text}]
+                            "role": "assistant",
+                            "content": reply_text
                         })
 
                         if len(chat_history[sender_id]) > 20:
